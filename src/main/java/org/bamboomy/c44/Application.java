@@ -30,15 +30,11 @@ Copyright 2026 Sander Theetaert
 
 package org.bamboomy.c44;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.Properties;
 
+import org.bamboomy.c44.rest.GamePoller;
 import org.bamboomy.c44.rest.Poller;
-import org.json.JSONArray;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -55,7 +51,7 @@ public class Application extends SpringBootServletInitializer {
 
 		return application.sources(Application.class);
 	}
-	
+
 	@Bean
 	public WebMvcConfigurer corsConfigurer() {
 		return new WebMvcConfigurer() {
@@ -72,7 +68,7 @@ public class Application extends SpringBootServletInitializer {
 
 		String serverUrl = null;
 
-		String colors = null;
+		String identifierHash = null;
 
 		try {
 
@@ -80,9 +76,9 @@ public class Application extends SpringBootServletInitializer {
 
 			serverUrl = prop.getProperty("server.url");
 
-			System.out.println(prop.getProperty("colors"));
+			System.out.println(prop.getProperty("identifierHash"));
 
-			colors = prop.getProperty("colors");
+			identifierHash = prop.getProperty("identifierHash");
 
 		} catch (IOException ex) {
 			ex.printStackTrace();
@@ -101,75 +97,6 @@ public class Application extends SpringBootServletInitializer {
 			e.printStackTrace();
 		}
 
-		JSONArray initingRobotHashes = getInitingRobotHashes(serverUrl);
-
-		boolean pollReady = !initingRobotHashes.isEmpty();
-
-		while (!pollReady) {
-
-			System.out.println("Couldn't find a game (yet...)...");
-
-			try {
-
-				Thread.sleep(3_000);
-
-			} catch (InterruptedException e) {
-
-				e.printStackTrace();
-			}
-
-			initingRobotHashes = getInitingRobotHashes(serverUrl);
-
-			pollReady = !initingRobotHashes.isEmpty();
-		}
-
-		Poller poller = new Poller(serverUrl, initingRobotHashes.getString(0), colors);
-
-		(new Thread(poller)).start();
+		(new Thread(new GamePoller(serverUrl, identifierHash))).start();
 	}
-
-	private static JSONArray getInitingRobotHashes(String serverUrl) {
-
-		URL url;
-
-		boolean connected = false;
-
-		while (!connected) {
-
-			try {
-
-				url = new URL(serverUrl + "/react/getInitingRobotHashes");
-				HttpURLConnection con = (HttpURLConnection) url.openConnection();
-				con.setRequestMethod("GET");
-
-				BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-				String inputLine;
-				StringBuffer content = new StringBuffer();
-				while ((inputLine = in.readLine()) != null) {
-					content.append(inputLine);
-				}
-				in.close();
-
-				con.disconnect();
-
-				System.out.println(content.toString());
-
-				return new JSONArray(content.toString());
-
-			} catch (IOException e) {
-
-				System.out.println("ignoring exception...");
-
-				try {
-					Thread.sleep(1_000);
-				} catch (InterruptedException e1) {
-
-					e1.printStackTrace();
-				}
-			}
-		}
-
-		return null;
-	}
-
 }

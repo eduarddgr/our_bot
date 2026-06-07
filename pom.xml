@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>c44</groupId>
 	<artifactId>our_c44_bot</artifactId>
-	<version>0.-3.-13</version>
+	<version>0.-2.-12</version>
 	<name>org.bamboomy.c44</name>
 	<packaging>war</packaging>
 

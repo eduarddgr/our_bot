@@ -28,6 +28,7 @@ import java.io.OutputStreamWriter;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 
 import org.bamboomy.c44.bot.board.Board;
 import org.bamboomy.c44.bot.player.Alliance;
@@ -42,7 +43,6 @@ public class Poller implements Runnable {
 
 	private String serverUrl;
 	private String robotHash;
-	private String[] playerHashesArray;
 	private String ownColor;
 
 	private Alliance alliance;
@@ -53,12 +53,12 @@ public class Poller implements Runnable {
 
 	private static final boolean OUTPUT_POUNDER = true;
 
-	public Poller(String serverUrl, String robotHash, String colors) {
+	private ArrayList<String> colorHashes;
+
+	public Poller(String serverUrl, ArrayList<String> colorHashes) {
 
 		this.serverUrl = serverUrl;
-		this.robotHash = robotHash;
-
-		playerHashesArray = getPath(serverUrl, "/register/" + robotHash + "/" + colors).toString().split(",");
+		this.colorHashes = colorHashes;
 	}
 
 	@Override
@@ -87,28 +87,28 @@ public class Poller implements Runnable {
 				e.printStackTrace();
 			}
 
-			StringBuffer robotBoard = getPath(serverUrl,
-					"/getRobotBoard/" + robotHash + "/" + playerHashesArray[index]);
+			StringBuffer robotBoard = getPath(serverUrl, "/getRobotBoard/" + colorHashes.get(index));
 
 			int augment = 0;
 
-			if (robotBoard == null && augment < playerHashesArray.length) {
+			while (robotBoard == null && augment < colorHashes.size()) {
 
-				index = (index + 1) % playerHashesArray.length;
+				System.out.println("gotten null response, trying with other color...");
+
+				index = (index + 1) % colorHashes.size();
 
 				augment++;
 
-				robotBoard = getPath(serverUrl, "/getRobotBoard/" + robotHash + "/" + playerHashesArray[index]);
+				robotBoard = getPath(serverUrl, "/getRobotBoard/" + colorHashes.get(index));
 			}
 
 			if (robotBoard != null && !robotBoard.toString().isEmpty()) {
 
 				System.out.println("I'm supposed to play now...");
 
-				ownColor = getPath(serverUrl, "/getColor/" + robotHash + "/" + playerHashesArray[index]).toString();
+				ownColor = getPath(serverUrl, "/getColor/" + colorHashes.get(index)).toString();
 
-				String allianceColor = getPath(serverUrl,
-						"/getAllianceColor/" + robotHash + "/" + playerHashesArray[index]).toString();
+				String allianceColor = getPath(serverUrl, "/getAllianceColor/" + colorHashes.get(index)).toString();
 
 				alliance = new Alliance(Color.getByName(ownColor), Color.getByName(allianceColor));
 
@@ -128,6 +128,8 @@ public class Poller implements Runnable {
 			int pointz = 0, meta = 0;
 
 			long finish;
+
+			robotHash = colorHashes.get(index);
 
 			while (thinking) {
 
@@ -167,7 +169,7 @@ public class Poller implements Runnable {
 
 			System.out.println("I poundered for: " + (finish - start) / 1_000 + " secondz...");
 
-			index = (index + 1) % playerHashesArray.length;
+			index = (index + 1) % colorHashes.size();
 
 			System.out.print("waiting to play again...");
 		}
